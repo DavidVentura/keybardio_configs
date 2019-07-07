@@ -20,6 +20,9 @@
 #include "Kaleidoscope-EEPROM-Settings.h"
 #include "Kaleidoscope-EEPROM-Keymap.h"
 
+#include <Kaleidoscope-TypingBreaks.h>
+
+
 // Support for communicating with the host via a simple Serial protocol
 #include "Kaleidoscope-FocusSerial.h"
 
@@ -57,8 +60,11 @@
 // Support for an LED mode that prints the keys you press in letters 4px high
 #include "Kaleidoscope-LED-AlphaSquare.h"
 
+// Support for an LED mode that lets one configure per-layer color maps
+#include "Kaleidoscope-Colormap.h"
+
 // Support for Keyboardio's internal keyboard testing mode
-#include "Kaleidoscope-Model01-TestMode.h"
+#include "Kaleidoscope-HardwareTestMode.h"
 
 // Support for host power management (suspend & wakeup)
 #include "Kaleidoscope-HostPowerManagement.h"
@@ -249,10 +255,10 @@ KEYMAPS(
    ___, ___, ___, ___,
    ___,
 
-   M(MACRO_VERSION_INFO),  ___, Key_Keypad7, Key_Keypad8,   Key_Keypad9,        Key_KeypadSubtract, ___,
-   ___,                    ___, Key_Keypad4, Key_Keypad5,   Key_Keypad6,        Key_KeypadAdd,      ___,
-                           ___, Key_Keypad1, Key_Keypad2,   Key_Keypad3,        Key_Equals,         ___,
-   ___,                    ___, Key_Keypad0, Key_KeypadDot, Key_KeypadMultiply, Key_KeypadDivide,   Key_Enter,
+   M(MACRO_VERSION_INFO),  ___, Key_7, Key_8,      Key_9,              Key_KeypadSubtract, ___,
+   ___,                    ___, Key_4, Key_5,      Key_6,              Key_KeypadAdd,      ___,
+                           ___, Key_1, Key_2,      Key_3,              Key_Equals,         ___,
+   ___,                    ___, Key_0, Key_Period, Key_KeypadMultiply, Key_KeypadDivide,   Key_Enter,
    ___, ___, ___, ___,
    ___),
 
@@ -376,19 +382,6 @@ void hostPowerManagementEventHandler(kaleidoscope::plugin::HostPowerManagement::
   toggleLedsOnSuspendResume(event);
 }
 
-/** This 'enum' is a list of all the magic combos used by the Model 01's
- * firmware The names aren't particularly important. What is important is that
- * each is unique.
- *
- * These are the names of your magic combos. They will be used by the
- * `USE_MAGIC_COMBOS` call below.
- */
-enum {
-  // Toggle between Boot (6-key rollover; for BIOSes and early boot) and NKRO
-  // mode.
-  COMBO_TOGGLE_NKRO_MODE
-};
-
 /** A tiny wrapper, to be used by MagicCombo.
  * This simply toggles the keyboard protocol via USBQuirks, and wraps it within
  * a function with an unused argument, to match what MagicCombo expects.
@@ -413,6 +406,7 @@ KALEIDOSCOPE_INIT_PLUGINS(
   // editable keymap in EEPROM.
   EEPROMSettings,
   EEPROMKeymap,
+  TypingBreaks,
 
   // Focus allows bi-directional communication with the host, and is the
   // interface through which the keymap in EEPROM can be edited.
@@ -433,7 +427,7 @@ KALEIDOSCOPE_INIT_PLUGINS(
 
   // The hardware test mode, which can be invoked by tapping Prog, LED and the
   // left Fn button at the same time.
-  TestMode,
+  HardwareTestMode,
 
   // LEDControl provides support for other LED modes
   LEDControl,
@@ -465,6 +459,9 @@ KALEIDOSCOPE_INIT_PLUGINS(
 
   // The stalker effect lights up the keys you've pressed recently
   StalkerEffect,
+
+  // The Colormap effect makes it possible to set up per-layer colormaps
+  ColormapEffect,
 
   // The numpad plugin is responsible for lighting up the 'numpad' mode
   // with a custom LED effect
@@ -528,6 +525,18 @@ void setup() {
   // by using the `settings.defaultLayer` Focus command, or by using the
   // `keymap.onlyCustom` command to use EEPROM layers only.
   EEPROMKeymap.setup(5);
+
+  // We need to tell the Colormap plugin how many layers we want to have custom
+  // maps for. To make things simple, we set it to five layers, which is how
+  // many editable layers we have (see above).
+  ColormapEffect.max_layers(5);
+
+  // The amount of time that can pass between two pressed keys, before the plugin considers it a new session, and starts all timers and counters over. Defaults to 300 seconds
+  TypingBreaks.settings.idle_time_limit = 60;
+
+
+  // The length of the session, after which the keyboard will be locked.  Defaults to 2700 seconds (45 minutes).
+  TypingBreaks.settings.lock_time_out = 3000;
 }
 
 /** loop is the second of the standard Arduino sketch functions.
